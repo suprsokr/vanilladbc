@@ -1,22 +1,28 @@
-# vanilladbc-go
+# vanilladbc
 
-A Go library and CLI tool for reading and writing World of Warcraft Vanilla (1.0.0 - 1.12.3) DBC files.
+A Go library for reading and writing World of Warcraft Vanilla (1.0.0 - 1.12.3) DBC files.
+
+This is a **library-only** package. For CLI tools and format conversion plugins, see:
+- [vanilladbc-cli](https://github.com/suprsokr/vanilladbc-cli) - Command-line tool
+- [vanilladbc-json](https://github.com/suprsokr/vanilladbc-json) - JSON conversion plugin
 
 ## Features
 
 - **DBD Parser** - Parse `.dbd` definition files from [VanillaDBDefs](https://github.com/suprsokr/VanillaDBDefs)
 - **DBC Reader** - Read binary DBC files using DBD definitions
 - **DBC Writer** - Write binary DBC files from structured data
-- **CLI Tool** - Command-line interface for DBC operations
+- **Streaming API** - Memory-efficient streaming for large files
+- **Iterator API** - Simple iteration over DBC records
+- **Plugin Interface** - Standard interface for format conversion plugins
 
 ## Project Structure
 
 ```
-vanilladbc-go/
-├── cmd/vanilladbc/        # CLI application
+vanilladbc/
 ├── pkg/
 │   ├── dbd/               # DBD file parser
-│   └── dbc/               # DBC file reader/writer
+│   ├── dbc/               # DBC file reader/writer/streaming
+│   └── plugin/            # Plugin interfaces
 ├── definitions/           # Git submodule: VanillaDBDefs
 └── internal/testdata/     # Test files
 ```
@@ -24,19 +30,20 @@ vanilladbc-go/
 ## Installation
 
 ```bash
-go get github.com/suprsokr/vanilladbc-go
+go get github.com/suprsokr/vanilladbc
 ```
 
 ## Usage
 
-### As a Library
+### Basic Reading
 
 ```go
 package main
 
 import (
-    "github.com/suprsokr/vanilladbc-go/pkg/dbd"
-    "github.com/suprsokr/vanilladbc-go/pkg/dbc"
+    "fmt"
+    "github.com/suprsokr/vanilladbc/pkg/dbd"
+    "github.com/suprsokr/vanilladbc/pkg/dbc"
 )
 
 func main() {
@@ -46,46 +53,113 @@ func main() {
         panic(err)
     }
     
-    // Read DBC file
+    // Read entire DBC file into memory
     data, err := dbc.ReadFile("Spell.dbc", definition, "1.12.1.5875")
     if err != nil {
         panic(err)
     }
     
-    // Access data
+    // Access all records
     for _, record := range data.Records {
         fmt.Println(record["ID"], record["Name"])
     }
 }
 ```
 
-### As a CLI Tool
+### Streaming (Memory Efficient)
 
-```bash
-# Read a DBC file
-vanilladbc read Spell.dbc --build 1.12.1.5875 --output spell.json
+```go
+// Stream records one at a time (better for large files)
+err := dbc.StreamFile("Spell.dbc", definition, "1.12.1.5875", 
+    func(recordNum int, record dbc.Record) error {
+        fmt.Printf("Record %d: ID=%v Name=%v\n", 
+            recordNum, record["ID"], record["Name"])
+        return nil
+    })
+```
 
-# Write a DBC file
-vanilladbc write spell.json --build 1.12.1.5875 --output Spell.dbc
+### Iterator Pattern
 
-# Convert DBC to JSON
-vanilladbc convert Spell.dbc --build 1.12.1.5875 --format json
+```go
+file, _ := os.Open("Spell.dbc")
+defer file.Close()
 
-# Validate a DBC file
-vanilladbc validate Spell.dbc --build 1.12.1.5875
+build, _ := dbd.NewBuild("1.12.1.5875")
+iter, err := dbc.NewIterator(file, definition, *build)
+if err != nil {
+    panic(err)
+}
+
+for iter.Next() {
+    record := iter.Record()
+    fmt.Printf("Record %d/%d: %v\n", iter.Index(), iter.Count(), record["ID"])
+}
+
+if iter.Err() != nil {
+    panic(iter.Err())
+}
+```
+
+### Writing DBC Files
+
+```go
+// Create records
+records := []dbc.Record{
+    {"ID": uint32(1), "Name": "Fireball", "School": uint32(2)},
+    {"ID": uint32(2), "Name": "Frostbolt", "School": uint32(4)},
+}
+
+// Get version definition
+build, _ := dbd.NewBuild("1.12.1.5875")
+versionDef, _ := definition.GetVersionDefinition(*build)
+
+// Write DBC file
+dbcFile := &dbc.DBCFile{
+    Records:    records,
+    Definition: versionDef,
+    Columns:    definition.Columns,
+}
+
+err := dbc.WriteFile("output.dbc", dbcFile)
+```
+
+### Implementing a Plugin
+
+```go
+import "github.com/suprsokr/vanilladbc/pkg/plugin"
+
+type MyPlugin struct {
+    // your fields
+}
+
+func (p *MyPlugin) WriteHeader(versionDef *dbd.VersionDefinition, 
+                                columns map[string]dbd.ColumnDefinition) error {
+    // Setup output format
+    return nil
+}
+
+func (p *MyPlugin) WriteRecord(record dbc.Record) error {
+    // Convert and write record
+    return nil
+}
+
+func (p *MyPlugin) WriteFooter() error {
+    // Finalize output
+    return nil
+}
 ```
 
 ## Development
 
 ```bash
 # Clone with submodules
-git clone --recursive https://github.com/suprsokr/vanilladbc-go.git
+git clone --recursive https://github.com/suprsokr/vanilladbc.git
 
 # Run tests
 go test ./...
 
-# Build CLI tool
-go build -o vanilladbc ./cmd/vanilladbc
+# Run tests with coverage
+go test -cover ./...
 ```
 
 ## Dependencies

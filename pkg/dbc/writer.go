@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/suprsokr/vanilladbc-go/pkg/dbd"
+	"github.com/suprsokr/vanilladbc/pkg/dbd"
 )
 
 // WriteFile writes a DBC file to the given path

@@ -1,6 +1,6 @@
 package dbc
 
-import "github.com/suprsokr/vanilladbc-go/pkg/dbd"
+import "github.com/suprsokr/vanilladbc/pkg/dbd"
 
 // Header represents the DBC file header (WDBC format for vanilla)
 type Header struct {

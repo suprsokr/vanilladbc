@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/suprsokr/vanilladbc-go/pkg/dbd"
+	"github.com/suprsokr/vanilladbc/pkg/dbd"
 )
 
 // ReadFile reads and parses a DBC file from the given path
