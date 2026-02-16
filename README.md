@@ -5,6 +5,8 @@ A Go library for reading and writing World of Warcraft Vanilla (1.0.0 - 1.12.3) 
 This is a **library-only** package. For CLI tools and format conversion plugins, see:
 - [vanilladbc-cli](https://github.com/suprsokr/vanilladbc-cli) - Command-line tool
 - [vanilladbc-json](https://github.com/suprsokr/vanilladbc-json) - JSON conversion plugin
+- [vanilladbc-csv](https://github.com/suprsokr/vanilladbc-csv) - CSV conversion plugin
+- [vanilladbc-mysql](https://github.com/suprsokr/vanilladbc-mysql) - MySQL conversion plugin
 
 ## Features
 
